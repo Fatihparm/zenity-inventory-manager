@@ -6,9 +6,8 @@
 echo "Proje başlatılıyor..."
 
 # CSV dosyalarının kontrolü ve oluşturulması
-function check_and_create_csv {
-  local files=("depo.csv" "kullanici.csv" "log.csv")
-  for file in "${files[@]}"; do
+check_and_create_csv() {
+  for file in "depo.csv" "kullanici.csv" "log.csv"; do
     if [ ! -f "$file" ]; then
       touch "$file"
       echo "$file dosyası oluşturuldu."
@@ -19,7 +18,7 @@ function check_and_create_csv {
 check_and_create_csv
 
 # Kullanıcı giriş ekranı
-function login {
+login() {
   zenity --forms --title="Giriş" --text="Kullanıcı Girişi" \
     --add-entry="Kullanıcı Adı" \
     --add-password="Parola" > login_info.txt
@@ -27,7 +26,6 @@ function login {
   local username=$(awk -F '|' '{print $1}' login_info.txt)
   local password=$(awk -F '|' '{print $2}' login_info.txt)
 
-  # Kullanıcı doğrulama
   if grep -q "$username" kullanici.csv && grep -q "$password" kullanici.csv; then
     zenity --info --text="Hoş geldiniz, $username!"
     main_menu
@@ -39,61 +37,43 @@ function login {
 }
 
 # Ana menü
-function main_menu {
+main_menu() {
   local choice=$(zenity --list --title="Ana Menü" --column="İşlem" \
     "Ürün Ekle" "Ürün Listele" "Ürün Güncelle" "Ürün Sil" "Rapor Al" "Kullanıcı Yönetimi" "Program Yönetimi" "Çıkış")
 
   case "$choice" in
-    "Ürün Ekle")
-      add_product
-      ;;
-    "Ürün Listele")
-      list_products
-      ;;
-    "Ürün Güncelle")
-      update_product
-      ;;
-    "Ürün Sil")
-      delete_product
-      ;;
-    "Rapor Al")
-      generate_report
-      ;;
-    "Kullanıcı Yönetimi")
-      user_management
-      ;;
-    "Program Yönetimi")
-      program_management
-      ;;
-    "Çıkış")
-      zenity --question --text="Çıkmak istediğinizden emin misiniz?" && exit 0
-      ;;
+    "Ürün Ekle") add_product ;;
+    "Ürün Listele") list_products ;;
+    "Ürün Güncelle") update_product ;;
+    "Ürün Sil") delete_product ;;
+    "Rapor Al") generate_report ;;
+    "Kullanıcı Yönetimi") user_management ;;
+    "Program Yönetimi") program_management ;;
+    "Çıkış") zenity --question --text="Çıkmak istediğinizden emin misiniz?" && exit 0 ;;
   esac
 }
 
 # Ürün ekleme
-function add_product {
+add_product() {
   local input=$(zenity --forms --title="Ürün Ekle" --text="Yeni ürün bilgilerini girin:" \
     --add-entry="Ürün Adı" \
     --add-entry="Stok Miktarı" \
     --add-entry="Birim Fiyatı")
 
-  local name=$(echo "$input" | awk -F '|' '{print $1}')
-  local stock=$(echo "$input" | awk -F '|' '{print $2}')
-  local price=$(echo "$input" | awk -F '|' '{print $3}')
+  IFS='|' read -r name stock price <<< "$input"
 
   if [[ -z "$name" || -z "$stock" || -z "$price" || "$stock" -lt 0 || "$price" -lt 0 ]]; then
     zenity --error --text="Geçersiz giriş. Lütfen tüm alanları doğru doldurun."
     return
   fi
 
-  local id=$(($(tail -n 1 depo.csv | awk -F ',' '{print $1}') + 1))
+  local id=$(( $(tail -n 1 depo.csv | awk -F ',' '{print $1}') + 1 ))
   echo "$id,$name,$stock,$price" >> depo.csv
   zenity --info --text="Ürün başarıyla eklendi."
 }
 
 # Ürün listeleme
-function list_products {
+list_products() {
   if [ ! -s depo.csv ]; then
     zenity --warning --text="Envanterde ürün bulunmamaktadır."
     return
@@ -103,7 +83,7 @@ function list_products {
 }
 
 # Ürün güncelleme
-function update_product {
+update_product() {
   local name=$(zenity --entry --title="Ürün Güncelle" --text="Güncellemek istediğiniz ürünün adını girin:")
 
   if ! grep -q "$name" depo.csv; then
@@ -126,7 +106,7 @@ function update_product {
 }
 
 # Ürün silme
-function delete_product {
+delete_product() {
   local name=$(zenity --entry --title="Ürün Sil" --text="Silmek istediğiniz ürünün adını girin:")
 
   if ! grep -q "$name" depo.csv; then
@@ -142,7 +122,7 @@ function delete_product {
 }
 
 # Raporlama
-function generate_report {
+generate_report() {
   local choice=$(zenity --list --title="Rapor Al" --column="Rapor Türü" \
     "Stokta Azalan Ürünler" "En Yüksek Stok Miktarına Sahip Ürünler")
 
@@ -158,7 +138,7 @@ function generate_report {
 }
 
 # Kullanıcı yönetimi
-function user_management {
+user_management() {
   local choice=$(zenity --list --title="Kullanıcı Yönetimi" --column="İşlem" \
     "Yeni Kullanıcı Ekle" "Kullanıcıları Listele" "Kullanıcı Güncelle" "Kullanıcı Sil")
 
@@ -167,8 +147,7 @@ function user_management {
       local input=$(zenity --forms --title="Yeni Kullanıcı Ekle" --text="Kullanıcı bilgilerini girin:" \
         --add-entry="Kullanıcı Adı" \
         --add-password="Parola")
-      local username=$(echo "$input" | awk -F '|' '{print $1}')
-      local password=$(echo "$input" | awk -F '|' '{print $2}')
+      IFS='|' read -r username password <<< "$input"
       echo "$username,$password" >> kullanici.csv
       zenity --info --text="Kullanıcı başarıyla eklendi."
       ;;
@@ -190,7 +169,7 @@ function user_management {
 }
 
 # Program yönetimi
-function program_management {
+program_management() {
   local choice=$(zenity --list --title="Program Yönetimi" --column="İşlem" \
     "Diskte Kapladığı Alan" "Diske Yedek Alma" "Hata Kayıtlarını Görüntüleme")
 
